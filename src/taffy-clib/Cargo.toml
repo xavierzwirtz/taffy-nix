@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-stretch2 = { version = "0.4.2" }
+# taffy = { version = "*", path = "/home/xavier/projects/taffy" }
+taffy = { git = "https://github.com/xavierzwirtz/taffy", branch = "boxednotsendasync" }
+# taffy = "*"
 
 [lib]
 name = "taffy"

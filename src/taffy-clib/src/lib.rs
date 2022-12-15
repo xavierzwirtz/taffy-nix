@@ -1,74 +1,94 @@
 use std::f32;
 use std::os::raw::*;
-use stretch2::geometry::*;
-use stretch2::node::*;
-use stretch2::number::*;
-use stretch2::style::*;
+use taffy::geometry::*;
+use taffy::node::*;
+use taffy::style::*;
+use taffy::layout::*;
+use taffy::prelude::LayoutTree;
 
 #[repr(C)]
-pub struct StretchSize {
+pub struct TaffySize {
     width: f32,
     height: f32,
 }
 
 #[repr(C)]
-pub struct StretchStyleDimension {
+pub struct TaffyStyleDimension {
     dimen_type: i32,
     dimen_value: f32,
 }
 
-impl Into<Dimension> for StretchStyleDimension {
+impl Into<Dimension> for TaffyStyleDimension {
     fn into(self) -> Dimension {
         match self.dimen_type {
             0 => Dimension::Points(self.dimen_value),
             1 => Dimension::Percent(self.dimen_value),
             2 => Dimension::Auto,
-            3 => Dimension::Undefined,
+            _ => panic!(),
+        }
+    }
+}
+
+impl Into<LengthPercentageAuto> for TaffyStyleDimension {
+    fn into(self) -> LengthPercentageAuto {
+        match self.dimen_type {
+            0 => LengthPercentageAuto::Points(self.dimen_value),
+            1 => LengthPercentageAuto::Percent(self.dimen_value),
+            2 => LengthPercentageAuto::Auto,
+            _ => panic!(),
+        }
+    }
+}
+
+impl Into<LengthPercentage> for TaffyStyleDimension {
+    fn into(self) -> LengthPercentage {
+        match self.dimen_type {
+            0 => LengthPercentage::Points(self.dimen_value),
+            1 => LengthPercentage::Percent(self.dimen_value),
             _ => panic!(),
         }
     }
 }
 
 #[repr(C)]
-pub struct StretchStyleRect {
-    start: StretchStyleDimension,
-    end: StretchStyleDimension,
-    top: StretchStyleDimension,
-    bottom: StretchStyleDimension,
+pub struct TaffyStyleRect {
+    left: TaffyStyleDimension,
+    right: TaffyStyleDimension,
+    top: TaffyStyleDimension,
+    bottom: TaffyStyleDimension,
 }
 
 #[repr(C)]
-pub struct StretchStyleSize {
-    width: StretchStyleDimension,
-    height: StretchStyleDimension,
+pub struct TaffyStyleSize {
+    width: TaffyStyleDimension,
+    height: TaffyStyleDimension,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_style_create(
+pub unsafe extern "C" fn taffy_style_create(
     display: i32,
     position_type: i32,
-    direction: i32,
     flex_direction: i32,
     flex_wrap: i32,
-    overflow: i32,
     align_items: i32,
     align_self: i32,
     align_content: i32,
     justify_content: i32,
 
-    position: StretchStyleRect,
-    margin: StretchStyleRect,
-    padding: StretchStyleRect,
-    border: StretchStyleRect,
+    position: TaffyStyleRect,
+    margin: TaffyStyleRect,
+    padding: TaffyStyleRect,
+    border: TaffyStyleRect,
+    gap: TaffyStyleSize,
 
     flex_grow: f32,
     flex_shrink: f32,
 
-    flex_basis: StretchStyleDimension,
+    flex_basis: TaffyStyleDimension,
 
-    size: StretchStyleSize,
-    min_size: StretchStyleSize,
-    max_size: StretchStyleSize,
+    size: TaffyStyleSize,
+    min_size: TaffyStyleSize,
+    max_size: TaffyStyleSize,
 
     aspect_ratio: f32,
 ) -> *mut c_void {
@@ -85,13 +105,6 @@ pub unsafe extern "C" fn stretch_style_create(
             _ => panic!(),
         },
 
-        direction: match direction {
-            0 => Direction::Inherit,
-            1 => Direction::LTR,
-            2 => Direction::RTL,
-            _ => panic!(),
-        },
-
         flex_direction: match flex_direction {
             0 => FlexDirection::Row,
             1 => FlexDirection::Column,
@@ -104,13 +117,6 @@ pub unsafe extern "C" fn stretch_style_create(
             0 => FlexWrap::NoWrap,
             1 => FlexWrap::Wrap,
             2 => FlexWrap::WrapReverse,
-            _ => panic!(),
-        },
-
-        overflow: match overflow {
-            0 => Overflow::Visible,
-            1 => Overflow::Hidden,
-            2 => Overflow::Scroll,
             _ => panic!(),
         },
 
@@ -154,32 +160,38 @@ pub unsafe extern "C" fn stretch_style_create(
         },
 
         position: Rect {
-            start: position.start.into(),
-            end: position.end.into(),
+            left: position.left.into(),
+            right: position.right.into(),
             top: position.top.into(),
             bottom: position.bottom.into(),
         },
 
         margin: Rect {
-            start: margin.start.into(),
-            end: margin.end.into(),
+            left: margin.left.into(),
+            right: margin.right.into(),
             top: margin.top.into(),
             bottom: margin.bottom.into(),
         },
 
         padding: Rect {
-            start: padding.start.into(),
-            end: padding.end.into(),
+            left: padding.left.into(),
+            right: padding.right.into(),
             top: padding.top.into(),
             bottom: padding.bottom.into(),
         },
 
         border: Rect {
-            start: border.start.into(),
-            end: border.end.into(),
+            left: border.left.into(),
+            right: border.right.into(),
             top: border.top.into(),
             bottom: border.bottom.into(),
         },
+
+        gap: Size {
+            width: gap.width.into(),
+            height: gap.height.into(),
+        },
+
 
         flex_grow,
         flex_shrink,
@@ -190,31 +202,31 @@ pub unsafe extern "C" fn stretch_style_create(
         min_size: Size { width: min_size.width.into(), height: min_size.height.into() },
         max_size: Size { width: max_size.width.into(), height: max_size.height.into() },
 
-        aspect_ratio: if f32::is_nan(aspect_ratio) { Number::Undefined } else { Number::Defined(aspect_ratio) },
+        aspect_ratio: if f32::is_nan(aspect_ratio) { None } else { Some(aspect_ratio) },
     })) as *mut c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_style_free(style: *mut c_void) {
+pub unsafe extern "C" fn taffy_style_free(style: *mut c_void) {
     let _style = Box::from_raw(style as *mut Style);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_init() -> *mut c_void {
-    let stretch = stretch2::node::Stretch::new();
+pub unsafe extern "C" fn taffy_init() -> *mut c_void {
+    let stretch = taffy::node::Taffy::new();
     Box::into_raw(Box::new(stretch)) as *mut c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_free(stretch: *mut c_void) {
-    let _stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_free(stretch: *mut c_void) {
+    let _stretch = Box::from_raw(stretch as *mut Taffy);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_create(stretch: *mut c_void, style: *mut c_void) -> *mut c_void {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_create(stretch: *mut c_void, style: *mut c_void) -> *mut c_void {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let style = Box::from_raw(style as *mut Style);
-    let node = stretch.new_node(*style, &[]).unwrap();
+    let node = stretch.new_with_children(*style, &[]).unwrap();
 
     Box::leak(style);
     Box::leak(stretch);
@@ -223,31 +235,35 @@ pub unsafe extern "C" fn stretch_node_create(stretch: *mut c_void, style: *mut c
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_free(stretch: *mut c_void, node: *mut c_void) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_free(stretch: *mut c_void, node: *mut c_void) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
 
-    stretch.remove(*node);
+    match stretch.remove(*node) {
+        Ok(_) => (),
+        Err(error) => {
+            panic!("{:?}", error)
+        },
+    };
 
     Box::leak(stretch);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_set_measure(
+pub unsafe extern "C" fn taffy_node_set_measure(
     stretch: *mut c_void,
     node: *mut c_void,
     swift_ptr: *mut c_void,
-    measure: fn(*const c_void, f32, f32) -> StretchSize,
+    measure: unsafe extern "C" fn(*const c_void, f32, f32) -> TaffySize,
 ) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
-
     stretch
         .set_measure(
             *node,
-            Some(stretch2::node::MeasureFunc::Boxed(Box::new(move |constraint| {
-                let size = measure(swift_ptr, constraint.width.or_else(f32::NAN), constraint.height.or_else(f32::NAN));
-                stretch2::geometry::Size { height: size.height, width: size.width }
+            Some(taffy::node::MeasureFunc::BoxedNotSendSync(Box::new(move |constraint, _| {
+                let size = measure(swift_ptr, constraint.width.unwrap_or(f32::NAN), constraint.height.unwrap_or(f32::NAN));
+                taffy::geometry::Size { height: size.height, width: size.width }
             }))),
         )
         .unwrap();
@@ -257,8 +273,8 @@ pub unsafe extern "C" fn stretch_node_set_measure(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_set_style(stretch: *mut c_void, node: *mut c_void, style: *mut c_void) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_set_style(stretch: *mut c_void, node: *mut c_void, style: *mut c_void) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
     let style = Box::from_raw(style as *mut Style);
 
@@ -270,8 +286,8 @@ pub unsafe extern "C" fn stretch_node_set_style(stretch: *mut c_void, node: *mut
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_dirty(stretch: *mut c_void, node: *mut c_void) -> bool {
-    let stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_dirty(stretch: *mut c_void, node: *mut c_void) -> bool {
+    let stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
     let dirty = stretch.dirty(*node).unwrap();
 
@@ -282,8 +298,8 @@ pub unsafe extern "C" fn stretch_node_dirty(stretch: *mut c_void, node: *mut c_v
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_mark_dirty(stretch: *mut c_void, node: *mut c_void) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_mark_dirty(stretch: *mut c_void, node: *mut c_void) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
 
     stretch.mark_dirty(*node).unwrap();
@@ -293,8 +309,8 @@ pub unsafe extern "C" fn stretch_node_mark_dirty(stretch: *mut c_void, node: *mu
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_add_child(stretch: *mut c_void, node: *mut c_void, child: *mut c_void) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_add_child(stretch: *mut c_void, node: *mut c_void, child: *mut c_void) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
     let child = Box::from_raw(child as *mut Node);
 
@@ -306,13 +322,13 @@ pub unsafe extern "C" fn stretch_node_add_child(stretch: *mut c_void, node: *mut
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_replace_child_at_index(
+pub unsafe extern "C" fn taffy_node_replace_child_at_index(
     stretch: *mut c_void,
     node: *mut c_void,
     index: usize,
     child: *mut c_void,
 ) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
     let child = Box::from_raw(child as *mut Node);
 
@@ -324,8 +340,8 @@ pub unsafe extern "C" fn stretch_node_replace_child_at_index(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_remove_child(stretch: *mut c_void, node: *mut c_void, child: *mut c_void) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_remove_child(stretch: *mut c_void, node: *mut c_void, child: *mut c_void) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
     let child = Box::from_raw(child as *mut Node);
 
@@ -337,8 +353,8 @@ pub unsafe extern "C" fn stretch_node_remove_child(stretch: *mut c_void, node: *
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_remove_child_at_index(stretch: *mut c_void, node: *mut c_void, index: usize) {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+pub unsafe extern "C" fn taffy_node_remove_child_at_index(stretch: *mut c_void, node: *mut c_void, index: usize) {
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
 
     stretch.remove_child_at_index(*node, index).unwrap();
@@ -348,22 +364,22 @@ pub unsafe extern "C" fn stretch_node_remove_child_at_index(stretch: *mut c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn stretch_node_compute_layout(
+pub unsafe extern "C" fn taffy_node_compute_layout(
     stretch: *mut c_void,
     node: *mut c_void,
     width: f32,
     height: f32,
-    create_layout: fn(*const f32) -> *mut c_void,
+    create_layout: unsafe extern "C" fn(*const f32) -> *mut c_void,
 ) -> *mut c_void {
-    let mut stretch = Box::from_raw(stretch as *mut Stretch);
+    let mut stretch = Box::from_raw(stretch as *mut Taffy);
     let node = Box::from_raw(node as *mut Node);
 
     stretch
         .compute_layout(
             *node,
             Size {
-                width: if f32::is_nan(width) { Number::Undefined } else { Number::Defined(width) },
-                height: if f32::is_nan(height) { Number::Undefined } else { Number::Defined(height) },
+                width: if f32::is_nan(width) { AvailableSpace::MaxContent } else { AvailableSpace::Definite(width) },
+                height: if f32::is_nan(height) { AvailableSpace::MaxContent } else { AvailableSpace::Definite(height) },
             },
         )
         .unwrap();
@@ -377,7 +393,7 @@ pub unsafe extern "C" fn stretch_node_compute_layout(
     create_layout(output.as_ptr())
 }
 
-fn copy_output(stretch: &Stretch, node: Node, output: &mut Vec<f32>) {
+fn copy_output(stretch: &Taffy, node: Node, output: &mut Vec<f32>) {
     let layout = stretch.layout(node).unwrap();
     let children = stretch.children(node).unwrap();
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <taffy.h>
 #include <math.h>
+#include <string.h>
 
 typedef struct Layout {
     float x;
@@ -56,95 +57,99 @@ void print_layout(Layout* layout, int level)
 int main(int argc, char const *argv[])
 {
 
-    StretchStyleDimension defaultStretchStyleDimension = {
-        3, //undefined
+    TaffyStyleDimension defaultTaffyStyleDimension = {
+        2, // auto
         0
     };
 
-    StretchStyleRect defaultStretchStyleRect = {
-        defaultStretchStyleDimension,
-        defaultStretchStyleDimension,
-        defaultStretchStyleDimension,
-        defaultStretchStyleDimension
-    };
-    StretchStyleSize defaultStretchStyleSize = {
-        defaultStretchStyleDimension,
-        defaultStretchStyleDimension
+    TaffyStyleDimension taffyLengthPercentageZero = {
+        0, // points
+        0
     };
 
-    void* stretch2 = stretch_init();
+    TaffyStyleRect defaultTaffyStyleRect = {
+        defaultTaffyStyleDimension,
+        defaultTaffyStyleDimension,
+        defaultTaffyStyleDimension,
+        defaultTaffyStyleDimension
+    };
+    TaffyStyleRect defaultTaffyStyleRect_Zero = {
+        taffyLengthPercentageZero,
+        taffyLengthPercentageZero,
+        taffyLengthPercentageZero,
+        taffyLengthPercentageZero
+    };
 
-    void* child_style = stretch_style_create(
+    TaffyStyleSize defaultTaffyStyleSize = {
+        defaultTaffyStyleDimension,
+        defaultTaffyStyleDimension
+    };
+
+    TaffyStyleSize defaultTaffyStyleSize_Zero = {
+        taffyLengthPercentageZero,
+        taffyLengthPercentageZero
+    };
+
+
+    void* taffy = taffy_init();
+
+    void* child_style = taffy_style_create(
                                              0, // display
                                              0, // position_type
-                                             0, // direction
                                              0, // flex_direction
                                              0, // flex_wrap
-                                             0, // overflow
                                              0, // align_items
                                              0, // align_self
                                              0, // align_content
                                              0, // justify_content
-                                             defaultStretchStyleRect, // position
-                                             defaultStretchStyleRect, // margin
-                                             defaultStretchStyleRect, // padding
-                                             defaultStretchStyleRect, // border
+                                             defaultTaffyStyleRect, // position
+                                             defaultTaffyStyleRect, // margin
+                                             defaultTaffyStyleRect_Zero, // padding
+                                             defaultTaffyStyleRect_Zero, // border
+                                             defaultTaffyStyleSize_Zero, // gap
                                              0, // flex_grow
                                              0, // flex_shrink
-                                             defaultStretchStyleDimension, // flex_basis
-                                             (StretchStyleSize) {
-                                                 (StretchStyleDimension){1, 0.5},
-                                                 (StretchStyleDimension){2, 0.0},
+                                             defaultTaffyStyleDimension, // flex_basis
+                                             (TaffyStyleSize) {
+                                                 (TaffyStyleDimension){1, 0.5},
+                                                 (TaffyStyleDimension){2, 0.0},
                                              }, // style
-                                             defaultStretchStyleSize, // min_size
-                                             defaultStretchStyleSize, // max_size,
+                                             defaultTaffyStyleSize, // min_size
+                                             defaultTaffyStyleSize, // max_size,
                                              NAN); // aspect_ratio
 
-    void* child = stretch_node_create(stretch2, child_style);
+    void* child = taffy_node_create(taffy, child_style);
 
-    void* node_style = stretch_style_create(
+    void* node_style = taffy_style_create(
                                            0, // display
                                            0, // position_type
-                                           0, // direction
                                            0, // flex_direction
                                            0, // flex_wrap
-                                           0, // overflow
                                            0, // align_items
                                            0, // align_self
                                            0, // align_content
                                            2, // justify_content
-                                           defaultStretchStyleRect, // position
-                                           defaultStretchStyleRect, // margin
-                                           defaultStretchStyleRect, // padding
-                                           defaultStretchStyleRect, // border
+                                           defaultTaffyStyleRect, // position
+                                           defaultTaffyStyleRect, // margin
+                                           defaultTaffyStyleRect_Zero, // padding
+                                           defaultTaffyStyleRect_Zero, // border
+                                           defaultTaffyStyleSize_Zero, // gap
                                            0, // flex_grow
                                            0, // flex_shrink
-                                           defaultStretchStyleDimension, // flex_basis
-                                           (StretchStyleSize) {
-                                               (StretchStyleDimension){0, 100},
-                                               (StretchStyleDimension){0, 100},
+                                           defaultTaffyStyleDimension, // flex_basis
+                                           (TaffyStyleSize) {
+                                               (TaffyStyleDimension){0, 100},
+                                               (TaffyStyleDimension){0, 100},
                                            }, // style
-                                           defaultStretchStyleSize, // min_size
-                                           defaultStretchStyleSize, // max_size,
+                                           defaultTaffyStyleSize, // min_size
+                                           defaultTaffyStyleSize, // max_size,
                                            NAN); // aspect_ratio
 
-    void* node = stretch_node_create(stretch2, node_style);
+    void* node = taffy_node_create(taffy, node_style);
 
-    stretch_node_add_child(stretch2, node, child);
+    taffy_node_add_child(taffy, node, child);
 
-    void* output = stretch_node_compute_layout(stretch2, node, NAN, NAN, create_layout);
-    /*     let node = stretch.new_node( */
-    /*         Style { */
-    /*             size: Size { width: Dimension::Points(100.0), height: Dimension::Points(100.0) }, */
-    /*             justify_content: JustifyContent::Center, */
-    /*             ..Default::default() */
-    /*         }, */
-    /*         vec![child], */
-    /*     )?; */
-
-    /*     stretch.compute_layout(node, Size::undefined())?; */
-    /*     dbg!(stretch.layout(node)?); */
-    /* } */
+    void* output = taffy_node_compute_layout(taffy, node, NAN, NAN, create_layout);
 
     Layout* layout = (Layout*) output;
     print_layout(output, 0);
