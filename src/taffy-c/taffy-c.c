@@ -116,7 +116,7 @@ int main(int argc, char const *argv[])
                                              }, // style
                                              defaultTaffyStyleSize, // min_size
                                              defaultTaffyStyleSize, // max_size,
-                                             NAN); // aspect_ratio
+                                             (TaffyStyleDimension) { 0, 0 }); // aspect_ratio
 
     void* child = taffy_node_create(taffy, child_style);
 
@@ -143,13 +143,18 @@ int main(int argc, char const *argv[])
                                            }, // style
                                            defaultTaffyStyleSize, // min_size
                                            defaultTaffyStyleSize, // max_size,
-                                           NAN); // aspect_ratio
+                                           (TaffyStyleDimension) { 0, 0 }
+                                           ); // aspect_ratio
 
     void* node = taffy_node_create(taffy, node_style);
 
     taffy_node_add_child(taffy, node, child);
 
-    void* output = taffy_node_compute_layout(taffy, node, NAN, NAN, create_layout);
+    void* output = taffy_node_compute_layout(taffy,
+                                             node,
+                                             (TaffyStyleDimension) { 0, 0 },
+                                             (TaffyStyleDimension) { 0, 0 },
+                                             create_layout);
 
     Layout* layout = (Layout*) output;
     print_layout(output, 0);

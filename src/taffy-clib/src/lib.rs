@@ -90,7 +90,7 @@ pub unsafe extern "C" fn taffy_style_create(
     min_size: TaffyStyleSize,
     max_size: TaffyStyleSize,
 
-    aspect_ratio: f32,
+    aspect_ratio: TaffyStyleDimension,
 ) -> *mut c_void {
     Box::into_raw(Box::new(Style {
         display: match display {
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn taffy_style_create(
         min_size: Size { width: min_size.width.into(), height: min_size.height.into() },
         max_size: Size { width: max_size.width.into(), height: max_size.height.into() },
 
-        aspect_ratio: if f32::is_nan(aspect_ratio) { None } else { Some(aspect_ratio) },
+        aspect_ratio: if aspect_ratio.dimen_type == 0 { None } else { Some(aspect_ratio.dimen_value) },
     })) as *mut c_void
 }
 
@@ -367,8 +367,8 @@ pub unsafe extern "C" fn taffy_node_remove_child_at_index(stretch: *mut c_void, 
 pub unsafe extern "C" fn taffy_node_compute_layout(
     stretch: *mut c_void,
     node: *mut c_void,
-    width: f32,
-    height: f32,
+    width: TaffyStyleDimension,
+    height: TaffyStyleDimension,
     create_layout: unsafe extern "C" fn(*const f32) -> *mut c_void,
 ) -> *mut c_void {
     let mut stretch = Box::from_raw(stretch as *mut Taffy);
@@ -378,8 +378,8 @@ pub unsafe extern "C" fn taffy_node_compute_layout(
         .compute_layout(
             *node,
             Size {
-                width: if f32::is_nan(width) { AvailableSpace::MaxContent } else { AvailableSpace::Definite(width) },
-                height: if f32::is_nan(height) { AvailableSpace::MaxContent } else { AvailableSpace::Definite(height) },
+                width: if width.dimen_type == 0 { AvailableSpace::MaxContent } else { AvailableSpace::Definite(width.dimen_value) },
+                height: if height.dimen_type == 0 { AvailableSpace::MaxContent } else { AvailableSpace::Definite(height.dimen_value) },
             },
         )
         .unwrap();
