@@ -12,26 +12,32 @@ typedef struct Layout {
     void** children;
 } Layout;
 
-void* create_layout(const float* f)
+void* create_layout_inner(float** f)
 {
     Layout* layout = malloc(sizeof(struct Layout));
 
-    layout->x = *f;
-    f++;
-    layout->y = *f;
-    f++;
-    layout->width = *f;
-    f++;
-    layout->height = *f;
-    f++;
-    layout->childCount = *f;
-    f++;
+    layout->x = **f;
+    (*f)++;
+    layout->y = **f;
+    (*f)++;
+    layout->width = **f;
+    (*f)++;
+    layout->height = **f;
+    (*f)++;
+    layout->childCount = **f;
+    (*f)++;
 
     layout->children = malloc(sizeof(void *) * layout->childCount);
     for (int i = 0; i < layout->childCount; i++) {
-        layout->children[i] = create_layout(f);
+        layout->children[i] = create_layout_inner(f);
     }
 
+    return layout;
+}
+
+void* create_layout(const float* f)
+{
+    Layout* layout = create_layout_inner((float **)&f);
     return layout;
 }
 
@@ -93,7 +99,7 @@ int main(int argc, char const *argv[])
 
     void* taffy = taffy_init();
 
-    void* child_style = taffy_style_create(
+    void* child_style1 = taffy_style_create(
                                              0, // display
                                              0, // position_type
                                              0, // flex_direction
@@ -103,22 +109,49 @@ int main(int argc, char const *argv[])
                                              0, // align_content
                                              0, // justify_content
                                              defaultTaffyStyleRect, // position
-                                             defaultTaffyStyleRect, // margin
+                                             defaultTaffyStyleRect_Zero, // margin
                                              defaultTaffyStyleRect_Zero, // padding
                                              defaultTaffyStyleRect_Zero, // border
                                              defaultTaffyStyleSize_Zero, // gap
                                              0, // flex_grow
-                                             0, // flex_shrink
+                                             1, // flex_shrink
                                              defaultTaffyStyleDimension, // flex_basis
                                              (TaffyStyleSize) {
-                                                 (TaffyStyleDimension){1, 0.5},
-                                                 (TaffyStyleDimension){2, 0.0},
+                                                 (TaffyStyleDimension){0, 10},
+                                                 (TaffyStyleDimension){0, 10},
                                              }, // style
                                              defaultTaffyStyleSize, // min_size
                                              defaultTaffyStyleSize, // max_size,
                                              (TaffyStyleDimension) { 0, 0 }); // aspect_ratio
 
-    void* child = taffy_node_create(taffy, child_style);
+    void* child1 = taffy_node_create(taffy, child_style1);
+
+    void* child_style2 = taffy_style_create(
+                                             0, // display
+                                             0, // position_type
+                                             0, // flex_direction
+                                             0, // flex_wrap
+                                             0, // align_items
+                                             0, // align_self
+                                             0, // align_content
+                                             0, // justify_content
+                                             defaultTaffyStyleRect, // position
+                                             defaultTaffyStyleRect_Zero, // margin
+                                             defaultTaffyStyleRect_Zero, // padding
+                                             defaultTaffyStyleRect_Zero, // border
+                                             defaultTaffyStyleSize_Zero, // gap
+                                             0, // flex_grow
+                                             1, // flex_shrink
+                                             defaultTaffyStyleDimension, // flex_basis
+                                             (TaffyStyleSize) {
+                                                 (TaffyStyleDimension){0, 20},
+                                                 (TaffyStyleDimension){0, 20},
+                                             }, // style
+                                             defaultTaffyStyleSize, // min_size
+                                             defaultTaffyStyleSize, // max_size,
+                                             (TaffyStyleDimension) { 0, 0 }); // aspect_ratio
+
+    void* child2 = taffy_node_create(taffy, child_style2);
 
     void* node_style = taffy_style_create(
                                            0, // display
@@ -130,12 +163,12 @@ int main(int argc, char const *argv[])
                                            0, // align_content
                                            2, // justify_content
                                            defaultTaffyStyleRect, // position
-                                           defaultTaffyStyleRect, // margin
+                                           defaultTaffyStyleRect_Zero, // margin
                                            defaultTaffyStyleRect_Zero, // padding
                                            defaultTaffyStyleRect_Zero, // border
                                            defaultTaffyStyleSize_Zero, // gap
                                            0, // flex_grow
-                                           0, // flex_shrink
+                                           1, // flex_shrink
                                            defaultTaffyStyleDimension, // flex_basis
                                            (TaffyStyleSize) {
                                                (TaffyStyleDimension){0, 100},
@@ -148,12 +181,13 @@ int main(int argc, char const *argv[])
 
     void* node = taffy_node_create(taffy, node_style);
 
-    taffy_node_add_child(taffy, node, child);
+    taffy_node_add_child(taffy, node, child1);
+    taffy_node_add_child(taffy, node, child2);
 
     void* output = taffy_node_compute_layout(taffy,
                                              node,
-                                             (TaffyStyleDimension) { 0, 0 },
-                                             (TaffyStyleDimension) { 0, 0 },
+                                             (TaffyStyleDimension) { 1, 100 },
+                                             (TaffyStyleDimension) { 1, 100 },
                                              create_layout);
 
     Layout* layout = (Layout*) output;
