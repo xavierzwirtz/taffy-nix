@@ -17,14 +17,13 @@
   };
 
   outputs = { self, nixpkgs, crane, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-        };
-
-        craneLib = crane.lib.${system};
-        taffy-clib = craneLib.buildPackage {
+    let
+      overlay = final: prev: {
+        taffy-clib = final.callPackage ({pkgs}:
+          let
+            craneLib = crane.mkLib pkgs;
+          in
+          craneLib.buildPackage {
           src = craneLib.cleanCargoSource ./src/taffy-clib;
 
           buildInputs = [
@@ -41,13 +40,23 @@
           postInstall = ''
             cbindgen --lang c --output $out/include/taffy.h
           '';
+        }) {};
+      };
+    in
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [overlay];
         };
+
+        craneLib = crane.lib.${system};
         taffy-c = pkgs.stdenv.mkDerivation {
           name = "taffy-c";
 
           src = ./src/taffy-c;
 
-          buildInputs = [ taffy-clib ];
+          buildInputs = [ pkgs.taffy-clib ];
 
           configurePhase = ''
             declare -xp
@@ -63,11 +72,11 @@
       in
       {
         checks = {
-          inherit taffy-clib;
+          inherit (pkgs) taffy-clib;
         };
 
-        packages.default = taffy-clib;
-        packages.taffy-clib = taffy-clib;
+        packages.default = pkgs.taffy-clib;
+        packages.taffy-clib = pkgs.taffy-clib;
         packages.taffy-c = taffy-c;
 
         devShell = pkgs.mkShell {
@@ -79,5 +88,7 @@
             rustc
           ];
         };
-      });
+      }) // {
+        inherit overlay;
+      };
 }
